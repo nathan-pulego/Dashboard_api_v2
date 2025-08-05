@@ -2,15 +2,15 @@ import {repository} from '@loopback/repository';
 import {post, requestBody, response, HttpErrors} from '@loopback/rest';
 import {inject} from '@loopback/core';
 import {UserRepository} from '../repositories';
-import {HashPasswordService} from '../services/bcrpyt-hasher.service';
 import {User} from '../models';
+import {PasswordHasher} from '../services';
 
 export class AuthController {
   constructor(
     @repository(UserRepository)
     public userRepository: UserRepository,
     @inject('services.HashPasswordService') 
-    public passwordHasher: HashPasswordService, 
+    public passwordHasher: PasswordHasher,
   ) {}
 
   @post('/auth/login')
@@ -18,9 +18,10 @@ export class AuthController {
     description: 'User login',
     content: {'application/json': {schema: {type: 'object'}}},
   })
+
   async login(
     @requestBody() credentials: Pick<User, 'username' | 'password'>,
-  ) {
+  ): Promise<{message: string; username: string}> {
     const user = await this.userRepository.findOne({
       where: {username: credentials.username},
     });
@@ -35,12 +36,19 @@ export class AuthController {
     );
 
     if (!passwordMatch) {
+      // --- TEMPORARY DEBUG LOGGING ---
+      // Use JSON.stringify to reveal any hidden whitespace. REMOVE in production.
+      console.log('DEBUG: Login failed. Comparing provided password against stored hash.');
+      console.log('Provided:', JSON.stringify(credentials.password));
+      console.log('Stored Hash:', JSON.stringify(user.password));
+      // This generic error message is a security best practice
+      // to prevent attackers from guessing valid usernames.
       throw new HttpErrors.Unauthorized('Invalid username or password');
     }
 
     return {
       message: 'Login successful',
-      user: user.username,
+      username: user.username,
     };
   }
 }
