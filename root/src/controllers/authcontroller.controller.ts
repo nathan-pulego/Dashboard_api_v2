@@ -16,14 +16,24 @@ export class AuthController {
   @post('/auth/login')
   @response(200, {
     description: 'User login',
-    content: {'application/json': {schema: {type: 'object'}}},
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            username: {type: 'string'},
+          },
+        },
+      },
+    },
   })
 
   async login(
-    @requestBody() credentials: Pick<User, 'username' | 'password'>,
+    @requestBody() credentials: Pick<User, 'email' | 'password'>,
   ): Promise<{message: string; username: string}> {
     const user = await this.userRepository.findOne({
-      where: {username: credentials.username},
+      where: {email: credentials.email},
     });
 
     if (!user) {
@@ -39,8 +49,8 @@ export class AuthController {
       // --- TEMPORARY DEBUG LOGGING ---
       // Use JSON.stringify to reveal any hidden whitespace. REMOVE in production.
       console.log('DEBUG: Login failed. Comparing provided password against stored hash.');
-      console.log('Provided:', JSON.stringify(credentials.password));
-      console.log('Stored Hash:', JSON.stringify(user.password));
+      console.log('Provided Email:', JSON.stringify(credentials.email)); // Changed from username
+      console.log('Provided Password:', JSON.stringify(credentials.password)); // Changed from username
       // This generic error message is a security best practice
       // to prevent attackers from guessing valid usernames.
       throw new HttpErrors.Unauthorized('Invalid username or password');
