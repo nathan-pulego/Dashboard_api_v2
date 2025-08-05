@@ -48,11 +48,6 @@ export class UserController {
     })
     user: Omit<User, 'id'>,
   ): Promise<User> {
-    // --- TEMPORARY DEBUG LOGGING ---
-    // Use JSON.stringify to reveal any hidden whitespace before hashing.
-    console.log('DEBUG: Hashing password for new user. Raw password received:', JSON.stringify(user.password));
-    // --- END DEBUG LOGGING ---
-
     user.password = await this.passwordHasher.hashPassword(user.password);
       return this.userRepository.create(user);
   }

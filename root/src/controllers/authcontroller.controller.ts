@@ -21,7 +21,8 @@ export class AuthController {
         schema: {
           type: 'object',
           properties: {
-            message: {type: 'string'},
+            message: {type: 'string'},  
+            userId: {type: 'number'},
             username: {type: 'string'},
           },
         },
@@ -31,7 +32,7 @@ export class AuthController {
 
   async login(
     @requestBody() credentials: Pick<User, 'email' | 'password'>,
-  ): Promise<{message: string; username: string}> {
+  ): Promise<{message: string; userId: number; username: string}> {
     const user = await this.userRepository.findOne({
       where: {email: credentials.email},
     });
@@ -46,18 +47,19 @@ export class AuthController {
     );
 
     if (!passwordMatch) {
-      // --- TEMPORARY DEBUG LOGGING ---
-      // Use JSON.stringify to reveal any hidden whitespace. REMOVE in production.
-      console.log('DEBUG: Login failed. Comparing provided password against stored hash.');
-      console.log('Provided Email:', JSON.stringify(credentials.email)); // Changed from username
-      console.log('Provided Password:', JSON.stringify(credentials.password)); // Changed from username
       // This generic error message is a security best practice
       // to prevent attackers from guessing valid usernames.
       throw new HttpErrors.Unauthorized('Invalid username or password');
     }
 
+    if (!user.id) {
+      // This case should ideally not be reached if the user is found in the database.
+      throw new HttpErrors.InternalServerError('User ID not found after authentication.');
+    }
+
     return {
       message: 'Login successful',
+      userId: user.id,
       username: user.username,
     };
   }
