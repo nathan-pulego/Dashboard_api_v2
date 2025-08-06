@@ -57,14 +57,15 @@ export class UserTaskController {
         'application/json': {
           schema: getModelSchemaRef(Task, {
             title: 'NewTaskInUser',
-            exclude: ['id'],
-            optional: ['username'],
+            exclude: ['id', 'username'], // exclude username, not userId
           }),
         },
       },
     })
-    task: Omit<Task, 'id'>,
+    task: Omit<Task, 'id'>,   
   ): Promise<Task> {
+    console.log('Creating task:', task);
+    console.log('Creating task:', task);
     return this.userRepository.tasks(id).create(task);
   }
 
@@ -106,3 +107,4 @@ export class UserTaskController {
     return this.userRepository.tasks(id).delete(where);
   }
 }
+  

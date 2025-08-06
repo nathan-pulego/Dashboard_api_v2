@@ -1,5 +1,5 @@
 import {repository} from '@loopback/repository';
-import {post, requestBody, response, HttpErrors} from '@loopback/rest';
+import {post, requestBody, response, HttpErrors, patch} from '@loopback/rest';
 import {inject} from '@loopback/core';
 import {UserRepository} from '../repositories';
 import {User} from '../models';
@@ -13,7 +13,7 @@ export class AuthController {
     public passwordHasher: PasswordHasher,
   ) {}
 
-  @post('/auth/login')
+  @patch('/auth/login')
   @response(200, {
     description: 'User login',
     content: {
@@ -24,6 +24,7 @@ export class AuthController {
             message: {type: 'string'},  
             userId: {type: 'number'},
             username: {type: 'string'},
+            isLoggedIn: {type: 'boolean'},
           },
         },
       },
@@ -32,7 +33,7 @@ export class AuthController {
 
   async login(
     @requestBody() credentials: Pick<User, 'email' | 'password'>,
-  ): Promise<{message: string; userId: number; username: string}> {
+  ): Promise<{message: string; userId: number; username: string; isLoggedIn: boolean;}> {
     const user = await this.userRepository.findOne({
       where: {email: credentials.email},
     });
@@ -52,6 +53,9 @@ export class AuthController {
       throw new HttpErrors.Unauthorized('Invalid username or password');
     }
 
+    user.isLoggedIn = true;
+    await this.userRepository.updateById(user.id, user);
+
     if (!user.id) {
       // This case should ideally not be reached if the user is found in the database.
       throw new HttpErrors.InternalServerError('User ID not found after authentication.');
@@ -61,6 +65,51 @@ export class AuthController {
       message: 'Login successful',
       userId: user.id,
       username: user.username,
+      isLoggedIn: user.isLoggedIn,
+    };
+  }
+
+
+  @patch('/auth/logout')
+  @response(200, {
+    description: 'User logout',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            userId: {type: 'number'},
+            username: {type: 'string'},
+            isLoggedIn: {type: 'boolean'},
+          },
+        },
+      },
+    },
+  })
+  async logout(
+    @requestBody() credentials: Pick<User, 'username'>,
+  ): Promise<{message: string; userId: number; username: string; isLoggedIn: boolean;}> {
+    const user = await this.userRepository.findOne({
+      where: {username: credentials.username},
+    });
+
+    if (!user) {
+      throw new HttpErrors.NotFound('User not found');
+    }
+
+    user.isLoggedIn = false;
+    console.log('logged out user')
+    await this.userRepository.updateById(user.id, user);
+
+    if (user.id === undefined) {
+      throw new HttpErrors.InternalServerError('User ID is undefined during logout.');
+    }
+    return {
+      message: 'Logout successful',
+      userId: user.id,
+      username: user.username,
+      isLoggedIn: user.isLoggedIn,
     };
   }
 }

@@ -1,6 +1,5 @@
 import {ApplicationConfig, DashboardApiApplication} from './application';
 import {RestBindings} from '@loopback/rest';
-import * as dotenv from 'dotenv';
 import {networkInterfaces} from 'os';
 
 export * from './application';
@@ -35,7 +34,6 @@ export async function main(options: ApplicationConfig = {}) {
 }
 
 if (require.main === module) {
-  dotenv.config();
   // Run the application
   const config: ApplicationConfig = {
     rest: {

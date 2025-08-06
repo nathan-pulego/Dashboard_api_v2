@@ -97,8 +97,6 @@ export class UserController {
     user: Partial<User>,
     @param.where(User) where?: Where<User>,
   ): Promise<Count> {
-    // For security, explicitly prevent password updates through the bulk update endpoint.
-    // The `updateById` endpoint should be used for individual password changes.
     delete user.password;
     return this.userRepository.updateAll(user, where);
   }

@@ -10,12 +10,14 @@ import {
   Task,
   User,
 } from '../models';
-import {TaskRepository} from '../repositories';
+import {TaskRepository, UserRepository} from '../repositories';
 
 export class TaskUserController {
   constructor(
     @repository(TaskRepository)
     public taskRepository: TaskRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) { }
 
   @get('/tasks/{id}/user', {
@@ -32,7 +34,8 @@ export class TaskUserController {
   })
   async getUser(
     @param.path.number('id') id: typeof Task.prototype.id,
-  ): Promise<User> {
-    return this.taskRepository.owner(id);
+  ): Promise<User | null> {
+    const task = await this.taskRepository.findById(id);
+    return this.userRepository.findOne({where: {username: task.username}});
   }
 }

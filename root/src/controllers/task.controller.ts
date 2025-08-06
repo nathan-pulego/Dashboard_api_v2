@@ -1,66 +1,52 @@
-import {
-  Count,
-  CountSchema,
-  Filter,
-  FilterExcludingWhere,
-  repository,
-  Where,
-} from '@loopback/repository';
+import {repository} from '@loopback/repository';
 import {
   post,
   param,
   get,
   getModelSchemaRef,
   patch,
-  put,
   del,
   requestBody,
   response,
 } from '@loopback/rest';
-import {Task} from '../models';
-import {TaskRepository} from '../repositories';
+import {Task, User} from '../models';
+import {TaskRepository, UserRepository} from '../repositories';
 
 export class TaskController {
   constructor(
     @repository(TaskRepository)
-    public taskRepository : TaskRepository,
+    public taskRepository: TaskRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) {}
 
-  @post('/dashboard')
+  @post('/users/{userId}/dashboard')
   @response(200, {
     description: 'Task model instance',
     content: {'application/json': {schema: getModelSchemaRef(Task)}},
   })
   async create(
+    @param.path.number('userId') userId: typeof User.prototype.id,
     @requestBody({
       content: {
         'application/json': {
           schema: getModelSchemaRef(Task, {
-            title: 'NewTask',
-            exclude: ['id'],
+            title: 'NewTaskInDashboard',
+            exclude: ['id', 'username'],
           }),
         },
       },
     })
     task: Omit<Task, 'id'>,
   ): Promise<Task> {
-    return this.taskRepository.create(task);
+    const user = await this.userRepository.findById(userId);
+    const taskToCreate = {...task, username: user.username};
+    return this.taskRepository.create(taskToCreate);
   }
 
-  @get('/dashboard/count')
+  @get('/users/{userId}/dashboard')
   @response(200, {
-    description: 'Task model count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async count(
-    @param.where(Task) where?: Where<Task>,
-  ): Promise<Count> {
-    return this.taskRepository.count(where);
-  }
-
-  @get('/dashboard')
-  @response(200, {
-    description: 'Array of Task model instances',
+    description: 'Array of Task model instances for a specific user',
     content: {
       'application/json': {
         schema: {
@@ -71,51 +57,18 @@ export class TaskController {
     },
   })
   async find(
-    @param.filter(Task) filter?: Filter<Task>,
+    @param.path.number('userId') userId: number,
   ): Promise<Task[]> {
-    return this.taskRepository.find(filter);
+    const user = await this.userRepository.findById(userId);
+    return this.taskRepository.find({where: {username: user.username}});
   }
 
-  @patch('/dashboard')
-  @response(200, {
-    description: 'Task PATCH success count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  async updateAll(
-    @requestBody({
-      content: {
-        'application/json': {
-          schema: getModelSchemaRef(Task, {partial: true}),
-        },
-      },
-    })
-    task: Task,
-    @param.where(Task) where?: Where<Task>,
-  ): Promise<Count> {
-    return this.taskRepository.updateAll(task, where);
-  }
-
-  @get('/dashboard/{id}')
-  @response(200, {
-    description: 'Task model instance',
-    content: {
-      'application/json': {
-        schema: getModelSchemaRef(Task, {includeRelations: true}),
-      },
-    },
-  })
-  async findById(
-    @param.path.number('id') id: number,
-    @param.filter(Task, {exclude: 'where'}) filter?: FilterExcludingWhere<Task>
-  ): Promise<Task> {
-    return this.taskRepository.findById(id, filter);
-  }
-
-  @patch('/dashboard/{id}')
+  @patch('/users/{userId}/dashboard/{id}')
   @response(204, {
     description: 'Task PATCH success',
   })
   async updateById(
+    @param.path.number('userId') userId: number,
     @param.path.number('id') id: number,
     @requestBody({
       content: {
@@ -124,27 +77,27 @@ export class TaskController {
         },
       },
     })
-    task: Task,
+    task: Partial<Task>,
   ): Promise<void> {
-    await this.taskRepository.updateById(id, task);
+    const user = await this.userRepository.findById(userId);
+    const existingTask = await this.taskRepository.findById(id);
+    if (existingTask.username === user.username) {
+      await this.taskRepository.updateById(id, task);
+    }
   }
 
-  @put('/dashboard/{id}')
-  @response(204, {
-    description: 'Task PUT success',
-  })
-  async replaceById(
-    @param.path.number('id') id: number,
-    @requestBody() task: Task,
-  ): Promise<void> {
-    await this.taskRepository.replaceById(id, task);
-  }
-
-  @del('/dashboard/{id}')
+  @del('/users/{userId}/dashboard/{id}')
   @response(204, {
     description: 'Task DELETE success',
   })
-  async deleteById(@param.path.number('id') id: number): Promise<void> {
-    await this.taskRepository.deleteById(id);
+  async deleteById(
+    @param.path.number('userId') userId: number,
+    @param.path.number('id') id: number,
+  ): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+    const existingTask = await this.taskRepository.findById(id);
+    if (existingTask.username === user.username) {
+      await this.taskRepository.deleteById(id);
+    }
   }
 }

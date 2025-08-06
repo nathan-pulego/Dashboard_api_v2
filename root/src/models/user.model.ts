@@ -25,7 +25,11 @@ export class User extends Entity {
   })
   username: string;
 
-
+  @property({
+    type: 'boolean',
+    required: true,
+  })
+  isLoggedIn: boolean;
 
   @property({
     type: 'string',
