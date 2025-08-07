@@ -69,7 +69,6 @@ export class AuthController {
     };
   }
 
-
   @patch('/auth/logout')
   @response(200, {
     description: 'User logout',
@@ -110,6 +109,56 @@ export class AuthController {
       userId: user.id,
       username: user.username,
       isLoggedIn: user.isLoggedIn,
+    };
+  }
+
+  @post('/auth/register')
+  @response(200, {
+    description: 'User registration',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            userId: {type: 'number'},
+            username: {type: 'string'},
+            isLoggedIn: {type: 'boolean'},
+          },
+        },
+      },
+    },
+  })
+  async register(
+    @requestBody() credentials: Pick<User, 'email' | 'username' | 'password'>,
+  ): Promise<{message: string; userId: number; username: string; isLoggedIn: boolean;}> { 
+    const existingUser = await this.userRepository.findOne({
+      where: {
+        or: [
+          {username: credentials.username},
+          {email: credentials.email},
+        ],
+      },
+    });
+    if (existingUser) {
+      throw new HttpErrors.BadRequest('Username or email already exists');
+    }
+
+
+    const hashedPassword = await this.passwordHasher.hashPassword(credentials.password);
+
+    const newUser = await this.userRepository.create({
+      username: credentials.username,
+      email: credentials.email,
+      password: hashedPassword,
+      isLoggedIn: false,
+    });
+
+    return {
+      message: 'Registration successful',
+      userId: newUser.id!,
+      username: newUser.username,
+      isLoggedIn: newUser.isLoggedIn,
     };
   }
 }
